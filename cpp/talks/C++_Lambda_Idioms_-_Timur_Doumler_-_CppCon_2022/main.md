@@ -1,3 +1,5 @@
+[Youtube Video](https://www.youtube.com/watch?v=xBAduq0RGes)
+
 ## Unary plus trick
 ```cpp
 int main() {
@@ -354,3 +356,304 @@ print_hihi();
 ```
 
 # Variable template lambda
+We can make the whole struct have a template (with addition to templated methods we alreday have with `auto`).
+```cpp
+template <typename T>
+constexpr auto c_cast = [](auto x) {
+    return (T)x;
+}
+```
+Turns into:
+```cpp
+template <typename T>
+struct __lambda_9 {
+    template <typename U>
+    inline auto operator(U x) const {
+        return (T)x;
+    }
+};
+
+template <typename T>
+auto c_cast = __lambda_9<T>();
+```
+This pattern can actually be useful in real life:
+```cpp
+using ms = std::chrono::milliseconds;
+using us = std::chrono::microseconds;
+using ns = std::chrono::nanoseconds;
+
+struct Time {
+    std::variant<ms, us, ns> time;
+
+    auto convert(const auto& converter) {
+        return std::visit(converter, time);
+    }
+};
+
+int main() {
+    Time t{ns(3000)};
+    std::cout << t.convert(std::chrono::duration_cast<us>).count();  // Error
+}
+```
+We get an error because `std::chrono::duration_cast` actually has 3 template parametres: `template< class ToDuration, class Rep, class Period >` and as a result `std::chrono::duration_cast<us>` isn't even fully declared (usually the last 2 parametres are deduced from the argument but in this scenerio we just want to pass this as some function).
+Solution:
+```cpp
+using ms = std::chrono::milliseconds;
+using us = std::chrono::microseconds;
+using ns = std::chrono::nanoseconds;
+
+struct Time {
+    std::variant<ms, us, ns> time;
+
+    auto convert(const auto& converter) {
+        return std::visit(converter, time);
+    }
+};
+
+template <typename T>
+constexpr auto duration_cast = [](auto d) {
+    return std::chrono::duration_cast<T>(d);
+};
+
+int main() {
+    Time t{ns(3000)};
+    std::cout << t.convert(duration_cast<us>).count();  // Works!
+}
+```
+# C++14 - Init capture
+Example:
+```cpp
+struct Widget {};
+auto ptr = std::make_unique<Widget>();
+
+auto f = [ptr = std::move(ptr)] {
+    std::cout << ptr.get() << '\n';
+};
+
+assert(ptr == nullptr);  // passes
+f();
+```
+The clojure will look like this:
+```cpp
+struct __lambda_8 {
+    __lambda_8(std::unique_ptr<Widget> _ptr)
+        : __ptr(std::move(_ptr))
+    {}
+
+    inline void operator()() const {
+        std::cout << __ptr.get() << '\n';
+    }
+
+private:
+    std::unique_ptr<Widget> __ptr; 
+};
+
+__lambda_8(std::move(ptr));
+```
+## Init Capture Optiization
+Let's look at an example:
+```cpp
+int main() {
+    const std::vector<std::string> vs = {"apple", "orange", "foobar", "lemon"};
+    const std::string prefix = "foo";
+
+    auto result = std::find_if(
+        vs.begin(), vs.end(),
+        [&prefix](const std::string& s) {
+            return s == prefix + "bar";
+        });
+
+    if (result != vs.end()) {
+        std::cout << *result << " -something found!\n";
+    }
+}
+```
+This is not very optimal because the concatination of prefix and "bar" will hapen at every iteration of the cycle inside of `std::find_if`.
+To optimize this we can precompute prexif + "bar" and store it using init capture:
+```cpp
+int main() {
+    const std::vector<std::string> vs = {"apple", "orange", "foobar", "lemon"};
+    const std::string prefix = "foo";
+
+    auto result = std::find_if(
+        vs.begin(), vs.end(),
+        [&prefix, str = prefix + "bar"](const std::string& s) {
+            return s == str;
+        });
+
+    if (result != vs.end()) {
+        std::cout << *result << " -something found!\n";
+    }
+}
+```
+# C++17
+- Lambdas can be constexpr:
+    ```cpp
+    auto f = []() constexpr {
+        return sizeof(*void);
+    }
+
+    std::array<int, f()> arr = {};
+    ```
+- CTAD (which we will use with lamdas)
+
+## Lambda Overload Set
+```cpp
+template <typename... Ts>
+struct overload : Ts... {
+    using Ts::operator()...;
+}
+
+int main() {
+    overload f = {
+        [](int i){ std::cout << "got int\n"; },
+        [](float i){ std::cout << "got float\n"; }
+    };
+
+    overload(1);
+    overload(2.0f);
+    /* It can be handy in the following way:
+    std::variant<int, float> v = 0.2f;
+    std::visit(f, v);
+    */
+}
+``` 
+This code will compile as-is since C++20 because in C++17 we need to add deduction guides to our class.
+Note: overload here is an aggregate so initializer list directly initializes base classes.
+
+# C++20
+- lambdas can capture structure bindings:
+    ```cpp
+    struct Widget {
+        float x, y;
+    };
+
+    auto [x, y] = Widget();
+    auto f = [=] {
+        std::cout << x << ' ' << y << '\n';
+    };
+    ```
+- lambdas can capture parametre packs:
+    ```cpp
+    auto foo(auto... args) {
+        std::cout << sizeof...(args) << '\n';
+    }
+    
+    template <typename... Args>
+    auto delay_invoke_foo(Args... args) {
+        return [args...]() -> decltype(auto) {
+            return foo(args...);
+        }
+    }
+    ```
+- lambdas can now be consteval:
+    ```cpp
+    auto f = [](int i) consteval {
+        return i * i;
+    };
+    ```
+- we got templated lambdas:
+    ```cpp
+    std::vector<int> data = {1, 2, 3, 4};
+    std::erase_if(
+        data,
+        []<typename T>(T i) {
+            return i % 2 == 0;
+        }
+    );
+    ```
+- lambdas allowed in unevaluated contexts
+- lambdas without captures are now:
+    - default-constructible
+    - assignable
+Now we can have lambdas as data members:
+```cpp
+class Widget {
+    decltype([]{}) foo;
+};
+```
+Or write like this:
+```cpp
+using WidgetSet = std::set<
+    Widget,
+    decltype([](Widget& lhs, Widget& rhs) { return lhs < rhs;  } )
+    >;
+
+WidgetSet widgets;
+```
+**Note: Every new lambda expression generates a new clojure type**
+Examples:
+```cpp
+auto f1 = []{};
+auto f2 = []{};
+// f1 and f2 have different types
+```
+```cpp
+auto f1 = []{};
+auto f2 = f1;
+// f1 and f2 have same type
+```
+```cpp
+auto f1 = []{};
+decltype(f1) f2;
+// f1 and f2 have the same type
+```
+```cpp
+using t = decltype([]{});
+t f1;
+t f2;
+// f1 and f2  have the same type
+```
+```cpp
+decltype([]{}) f1;
+decltype([]{}) f2;
+// f1 and f2 have different types
+```
+```cpp
+template <auto = []{}>
+struct X {};
+
+X x1;
+X x2;
+// x1 and x2 have different types
+```
+So now we have a unique type generator!
+
+# C++23
+
+## Recursive lambdas
+```cpp
+int main() {
+    auto f = [](this auto&& self, int i) {
+        if (i == 0) {
+            return 1;
+        }
+        return i * self(i - 1);
+    };
+
+    std::cout << f(5);  // 120
+}
+```
+
+Now we can create a quite fancy tree traversal:
+```cpp
+struct Leaf {};
+struct Node;
+using Tree = std::variant<Leaf, Node*>;
+struct Node {
+    Tree left, right;
+};
+
+template <typename... Ts>
+struct overload : Ts... { using Ts::operator()...; };
+
+int CountLeaves(const Tree& tree) {
+    return std::visit(overload{
+            [] (const Leaf& leaf) { return 1; },
+            [] (this const auto& self, const Node* node) -> int {
+                    return std::visit(self, node->left) + std::visit(self, node->right);
+                }
+            }
+        , tree);
+}
+```

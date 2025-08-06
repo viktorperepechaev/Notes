@@ -1,3 +1,4 @@
+[video](https://www.youtube.com/watch?v=JJqRlSTQlh4)
 [additional information](https://google.github.io/googletest/)
 
 ## Definitions
@@ -460,4 +461,31 @@ Ex:
 - `./foo_test --gtest_filter=*Null*:*Constructor*` Runs any test whose full name contains either "Null" or "Constructor"
 - `./foo_test --gtest_filter=-*DeathTest.*` Runs all non-death tests
 - `./foo_test --gtest_filter=FooTest.*-FooTest.Bar` Runs everything in test suite FooTest except FooTest.Bar
-- `./foo_test --gtest_filter=FooTest.*:BarTest.*-FooTest.Bar:BarTest.Foo` Runs everything in test suite FooTest except FooTest.Bar and everything in test suite BarTest except BarTest.Foo
+- `./foo_test --gtest_filter=FooTest.*:BarTest.*-FooTest.Bar:BarTest.Foo` Runs everything in test suite FooTest except FooTest.Bar and everything in test suite BarTest except BarTest.
+
+## Printing user types
+
+Some of the asserts provide descriptions of the containers' insides if the the fails (Ex: EXPECT\_THAT(value, mathcer)). But for this GoogleTest has to know how to print your container/type.
+You can "teach" GoogleTest by providing a `PrintTo` function:
+```cpp
+class Point {
+  ...
+  friend void PrintTo(const Point& point, std::ostream* os) {  // We can simply define the whole function
+                                                               // inside the class because ADL won't find
+                                                               // PrintTo in this case
+    *os << "(" << point.x << "," << point.y << ")";
+  }
+
+  int x;
+  int y;
+};
+
+// If you can't declare the function in the class it's important that PrintTo()
+// is defined in the SAME namespace that defines Point.  C++'s look-up rules
+// rely on that.
+
+void PrintTo(const Point& point, std::ostream* os) {
+    *os << "(" << point.x << "," << point.y << ")";
+}
+```
+

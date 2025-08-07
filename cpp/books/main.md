@@ -123,4 +123,86 @@ Self-explanatory
 
 Self-explanatory
 
-    
+# Navigating the project files
+
+Let's look at the files/directories that CMake uses to manage its projects.
+
+## The source tree
+
+This direcory contains all of the C++ source files and CMake project files. Its other name if project root.
+
+Things to remember:
+- You must provide a CMakeLists.txt file in the top direcotory of the source tree.
+- It should be managed with a VCS (Version Control System), for example, git.
+- The path to this directory is given with a `-S` flag.
+- Don't hardcode absolute paths to the source tree in your CMake code - the user might store the project in a different place.
+
+## The build tree
+
+CMake uses this direcory to store everything that gets generated during the building proccess. Other names are: build root and binary tree.
+
+Things to remember:
+- Your binary files, executables, libraries, object files, archives will be created here.
+- This directory is specific to the system, so don't add it to VCS.
+- It's recommended to produce artifacts in a directory that's not inside the build tree - to keep things clean.
+- The path to this directory is given with a `-B` flag.
+- It's recommended to have an installation stage that puts the final artifacts in some separate directory so that you can remove all the temporary files.
+
+## Listfiles
+
+It's simply files that contain CMake language. One of them can be included into another using the include(), find_package(), add_subdirectory() commands.
+
+Things to remember:
+- These files usually (but it's not obligatory) have a .cmake extension.
+- The most importnat listfile is CMakeLists.txt. It's the first file to be executed and must be in the root of the source tree.
+- Variables about listfiles: 
+    - ```CMAKE_CURRENT_LIST_DIR```
+    - ```CMAKE_CURRENT_LIST_FILE```
+    - ```CMAKE_PARENT_LIST_FILE```
+    - ```CMAKE_CURRENT_LIST_LINE```
+
+### CMakeLists.txt
+
+Such files must contain at least2 lines:
+- ```cmake_minimum_required(VERSION <x.xx>)```: sets an expected version of CMake
+- ```project(<name> <OPTIONS>)```: names the project and specifies the options of its configuration
+
+You can have more than one CMakeLists.txt.
+Ex:
+```
+CMakeLists.txt
+api/CMakeLists.txt
+api/api.h
+api/api.cpp
+```
+An example of CMakeLists.txt that brings everything together:
+```
+cmake_minimum_required(VERSION 3.20)
+project(app)
+message("Top Level CMakeLists.txt")
+add_subdirectory(api)
+```
+
+### CMakeCache.txt
+
+This file contains cache variables from listfiles when the configuration stage is run for the first time. It is located in the root of build tree.
+
+Things to remember:
+- You can change this file manually by using cmake flags.
+- You can reset the project to default state by deleting this file.
+
+### The Config-files for packages
+
+Your project may depend on an external package. Packages that support CMake should provide a configuration file so CMake can understand how to use them.
+
+Things to remember:
+- "Config-files" contain information regarding how to use the library binaries, headers and helper tools.
+- Use ```find_package()``` command to include packages.
+- CMake files describing packages are named ```<PackageName>-config.cmake``` and ```<PackageName>Config.cmake```
+- You can specify version of the package and CMake will search for ```<Config>Version.cmake```
+- If a vendor doesn't provide a need config-file - use "Find-module". It's a set of rules on how to find some dependency on your machine. You write the "Find-module" yourself.
+- CMake provides a package registry. It's like a local database that helps CMake with find previously installed libraries.
+
+### cmake\_install.cmake, CTestTestfile.cmake, CPackConfig.cmake
+
+Don't change these files manually. They are just for the internal work of cmake, ctest, cpack.

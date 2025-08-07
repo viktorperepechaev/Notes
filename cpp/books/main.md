@@ -354,7 +354,8 @@ message("3. and a variable reference: ${CMAKE_VERSION}")
 They evaluate escape sequences, variable references and allow to create a list of arguments instead of one string.
 Note: ";" is treated as a delimitre, even though simple spaces are preferable
 Ex:
-```argum\ ent\;1     arg;ume nts
+```
+   argum\ ent\;1     arg;ume nts
    \-----------/     \---------/
          |                |
   a signle argument three arguments
@@ -373,4 +374,7 @@ message(()()()) # a matching parentheses
 
 ## Working with variables
 
-
+Things to remember:
+- Variable names are case-sensitive
+- Variables are stored internally as strings
+- 

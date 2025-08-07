@@ -254,3 +254,123 @@ else()
 endif()
 ```
 
+# The basics of CMake Language syntax
+
+Reminder: to run a script do ```cmake -P script.cmake```
+
+Everything in a CMake listfile is either a command invocation or a comment.
+
+## Comments
+
+There are two kinds of comments:
+- single-line
+- bracket (multiline), can be nested
+Ex:
+```txt
+# comment1
+message("Hello!") # comment2
+
+#[=[
+comment3
+  #[[
+   comment4 
+  #]]
+#]=]
+```
+Multiline commets start with an opening square bracket "[" + any number of equal signs "=" + another square bracket "[".
+To close a bracket comment just reverse the square brackets.
+You can prepend openning brackets with # to quickly uncomment something (We used this in the example above).
+Ex:
+```
+##[=[ this is a single-line comment now
+comment3 <- no longer commented
+  #[[
+   comment4  <- still commented
+  #]]
+#]=] this is a single-line comment now
+```
+
+## Command invocations
+
+To execute a command, you must provide its name, followed by parentheses, in which you enclose a whitespace-separated list of command arguments.
+Ex:
+```txt
+message("hello" world)
+\-----/ \-----------/
+   |          |
+  name    arguments
+```
+Use snake_case in command names, even though it's not obligatory.
+
+Command invocations in CMake are not expressions. You can't provide abother command as an argument to a called command, as *everything* between the parentheses is interpreted as an argument for that command.
+Ex: ```set(MY_DIR get_filename_component(SOME_PATH DIRECTORY))``` will literally set the variable MY_DIR to the string "get_filename_component(SOME_PATH DIRECTORY)".
+
+CMake commands don't require semicolons at the end of an invocation, because there're only 2 "types" of lines:
+- ```command(argument1, argument2, ...) # comment```
+- ```[[multiline comment]]```
+Also putting a command after a bracket comment isn't allowed.
+
+## Command arguments
+
+The only data type recognized by CMake is a string.
+
+CMake has 3 types of arguments:
+- Bracket
+- Quoted
+- Unquoted
+Each type offers a different level of evaluation and has a few small quirks to it.
+
+### Bracket arguments
+
+Bracket arguments aren't evaluated and can pass multiple strings as a single argument.
+The syntax is very similar to comments, however you can't have nested bracket arguments.
+Ex:
+```
+message([[Lol
+  Aboba
+  zombie
+  ]] # Note: a newline will be printed because the closing tag is on the another line
+
+message([==[
+  this all
+  is still one argument
+  {"array" = [["mouse"], ["dog"]]}
+  ]==])
+```
+
+### Quoted arguments
+
+They allow for more processing (unlike bracket arguments which interpret everything "literally"), for example, expand sequences and variable references.
+Ex:
+```
+message("1. escape sequrnce: \" in a quoted argument")
+message("2. multi
+line")
+message("3. and a variable reference: ${CMAKE_VERSION}")
+```
+
+### Unquoted arguments
+
+They evaluate escape sequences, variable references and allow to create a list of arguments instead of one string.
+Note: ";" is treated as a delimitre, even though simple spaces are preferable
+Ex:
+```argum\ ent\;1     arg;ume nts
+   \-----------/     \---------/
+         |                |
+  a signle argument three arguments
+```
+Some rules:
+- Unquoted arguments cannot contain unescaped quotes `"`, hashes `#`, and backslashes `/`
+- Parentheses: `()` are allowed only if they form correct, matching pairs
+Exs:
+```
+message(a\ single\ argument)
+message(two arguments)
+message(three;separated;arguments)
+message(${CMAKE_VERSION}) # a variable reference
+message(()()()) # a matching parentheses
+```
+
+## Working with variables
+
+

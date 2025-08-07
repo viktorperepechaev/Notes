@@ -377,4 +377,53 @@ message(()()()) # a matching parentheses
 Things to remember:
 - Variable names are case-sensitive
 - Variables are stored internally as strings
-- 
+- To set a variable use `set()`
+- To unset a variable use `unset()`
+Ex:
+```
+set(MyString1 "Text1")
+set([[My string2]] "Text2")
+set("My string 3" "Text3")
+
+message(${MyString1})
+message(${My\ string2})
+message(${My\ string\ 3})
+```
+
+## Variable references
+
+To create reference to a defined variable use: `${MyVariable}`.
+
+The process of evaluation:
+1. CMake traverses the scope stack
+2. Replaces `${MyVariable}` with a value or an empty string if a variable is not found
+This process is called _variable evaluation_, _expansion_, _interpolation_.
+
+The process is performed in an inside-out fashion, meaning:
+1. If the following reference is encountered `${MyOuter${MyInner}}` - CMake will try to evaluate the inner first.
+2. If the MyInner variable is successfully expanded, CMake will repeat the first step but this time for the inner.
+
+Interesting example:
+Let's suppose that:
+- MyOuter holds _Hello_
+- MyInner holds _${My_ 
+If we call ```message("${MyOuter}Inner} World")``` the output will be: ```Helo World```. So the algorithm is **very** direct.
+
+Another interesting example is: what happens if we call ```set(${MyInner} "Hi")``` instead of the normal ```set(MyInner "Hi")```?
+Well, ```${MyInner}``` will expand and get replaces with _Hello_. As a result we will have a ```set(Hello "Hi")``` command which sets the value of the Hello variable.
+
+We can do variable referencing in three ways:
+- The ```${}``` syntax is used to reference _normal_ or _cache_ variables
+- The ```$ENV{}``` is used to reference _environment_ variables
+- The ```$CACHE{}``` is used to reference _cache_ variables
+
+## Using the environment variables
+
+CMake simply copies the environment variables and puts the copies into global scope.
+You can ```set()``` and ```unset()``` them but the changes are seen only by the running cmake proccess.
+
+To create or modify an environment variable use: ```set(ENV{<variable} <value>)``` (notice the _$_ is missing). Ex: ```set(ENV{CXX} "clang++")```
+To clear an environment variable use: ```unset(ENV{<variable>})```
+
+Another interesting thing to keep in mind is that CMake reads environment variables only once - during the configuration stage, after which CMake "bakes" them into the build tree
+and changing them later won't have any effect on the building stage.

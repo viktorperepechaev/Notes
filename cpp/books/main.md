@@ -206,3 +206,51 @@ Things to remember:
 ### cmake\_install.cmake, CTestTestfile.cmake, CPackConfig.cmake
 
 Don't change these files manually. They are just for the internal work of cmake, ctest, cpack.
+
+### CMakePresets.json and CMakeUserPresets.json
+
+TODO...
+
+### Ignoring files in Git
+
+```
+build_debug/
+build_release/
+build/
+
+**/CMakeCache.txt
+**/CMakeUserPresets.json
+**/CTestTestfile.cmake
+**/CPackConfig.cmake
+**/cmake_install.cmake
+**/install_manifest.txt
+**/compile_commands.json
+```
+
+### Scripts
+
+CMake offers a platform-agnostic programming language. As a result, you can write cross-platform scripts.
+The script file can be as complex as you want, however it's recommended that you csll the ```cmake_minimum_required``` command at the beginning.
+Ex:
+```
+cmake_minimum_required(VERSION 3.20.0)
+message("Hello world")
+file(WRITE Hello.txt "I am writing to a file")
+```
+
+### Utility modules
+
+Modules are just files that contain cmake code and that add functionality to your CMake project.
+Ex:
+```
+cmake_minimum_required(VERSION 3.20.0)
+project(ModuleExample)
+include(TestBigEndian)
+TEST_BIG_ENDIAN(IS_BIG_ENDIAN)
+if(IS_BIG_ENDIAN)
+    message("BIG_ENDIAN")
+else()
+    message("LITTLE_ENDIAN")
+endif()
+```
+

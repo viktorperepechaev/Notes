@@ -500,4 +500,101 @@ The ```message()``` command will receive six arguments:
 4. of
 5. five
 6. elements
+
 And so the output will be: ```the list is:alistoffiveelements```
+
+You can do many things with a list, for example: ```list(SORT <list> [...])```
+
+## Understanding control structures in CMake
+
+CMake has three forms of conditional structures:
+- Conditional blocks
+- Loops
+- Command definitions
+
+They are executed in scripts and during the building process.
+
+### Conditional blocks
+
+The only conditional block in CMake is the ```if()``` command. All if-s must be closed with ```endif()```. You can add as many ```elseif()``` as you like.
+```
+if(<condition>)
+    <commands>
+elseif(<condition>)
+    <commands>
+else()
+    <commands>
+endif()
+```
+
+### The syntax for conditional commands
+
+The same syntax is valid for ```if()```, ```elseif()``` and ```while()``` commands.
+
+Logic operators:
+- NOT <condition>
+- <condition> AND <condition>
+- <condition> OR <condition>
+
+You can comdine conditions:
+- (<condition>) AND (<condition> OR <condition>)
+
+### The evaluation of a string and a variable
+
+Another thing: strings are considered Boolean true only if they are exactly equal to one of these:
+- ON
+- Y
+- YES
+- TRUE
+- A non-zero number
+
+The process of evaluating unquoted variables is a bit tricky. When CMake encounters the following: ```if(VAR)``` it performs a one-time check (non-reqursive):
+1. if VAR variable is undefined - ```if(VAR)``` turns into false.
+2. if VAR variable is defined - CMake replaces VAR with its value
+    1. If the value is exactly equal to _OFF_, _NO_, _FALSE_, _N_, _IGNORE_, _NOTFOUND_ - false
+    2. If the value is a string ending with _-NOTFOUND_ - false
+    3. If the value is an empty sctring - false
+    4. If the value is _0_ - false
+    5. true in other cases.
+
+Ex1:
+```
+set(VAR1 FALSE)
+set(VAR2 "VAR1")
+if(${VAR2})
+  message("True")
+else()
+  message("False")
+endif()
+```
+output: False
+Reason: firstly, ```${VAR2}``` is expanded to ```VAR1```, secondly VAR1 is expanded to ```FALSE```, thirdly CMake interprets ```FALSE``` as a false condition because its from the list above.
+
+Ex2:
+```
+set(VAR3 "FALSE")
+set(VAR2 VAR3)
+set(VAR1 [[${VAR2}]])
+if (VAR1)
+  message("True")
+else()
+  message("False")
+endif()
+```
+output: True
+Reason: firstly, ```VAR1``` is expanded to ```${VAR2}```, secondly ```${VAR2}``` is interpreted as a true condition because the literal string ```${VAR2}``` doesn't fit in the list above.
+Rememeber evaluation of unquoted variables is non-recursive!
+
+We can explicitly check if a variable is defined or not:
+- ```if(DEFINED <name>)```
+- ```if(DEFINED CACHE{<name>})```
+- ```if(DEFINED ENV{<name>})```
+
+### Comparing values
+
+For that we have following operators: _EQUAL_, _LESS_, _LESS_EQUAL_, _GREATER_, _GREATER_EQUAL_.
+Ex: ```if (1 LESS 2)```
+Note: CMake documentation specifies that if one of the operands is not a number, the value will be _false_. However, practical examples show that comparing with strings that start with numbers works somewhat ok: ```if (20 EQUAL "20 GB")``` -> _true_.
+
+You can compare software versions by adding _VERSION__ prefix to any of the operators: ```if (1.3.4 VERSION_LESS_EQUAL 1.4)```
+You can compare strings lexicographically by adding _STR_ prefix: ```if (A STREQUAL "${B}")```

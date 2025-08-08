@@ -427,3 +427,77 @@ To clear an environment variable use: ```unset(ENV{<variable>})```
 
 Another interesting thing to keep in mind is that CMake reads environment variables only once - during the configuration stage, after which CMake "bakes" them into the build tree
 and changing them later won't have any effect on the building stage.
+
+## Using the cache variables
+
+Note: cache variables aren't available in _scripts_ - they only exist in _projects_.
+
+Refer to cache variable with the syntax: ```$CACHE{<name>}```
+Set a cache variable with the syntax: ```set(<variable> <value> CACHE <type> <docstring> [FORCE])```. ```CACHE``` and ```FORCE``` are keywords.
+
+The ```CACHE``` says that we want to change something that was provided during the configuration stage, as a result we need to provide <type> and <docstring> so that
+GUI can display these vasriables correctly (Why cache variables must be displayable? Well, so that ccmake or cmake-gui can show you them for you to easily remember :) ).
+Possible types:
+- ```BOOL```
+- ```FILEPATH``` - path to a file
+- ```PATH``` - path to a directory
+- ```STRING``` - a line of text
+- ```INTERNAL``` - a line of text, but GUI skips internal values (They won't be visible to the user). It implicitly adds ```FORCE``` keyword.
+
+The <docstring> is simply a description of the variable, you must provide it even for the internal variables.
+
+Just like enveronment variables, changing a cache variable affects only the current cmake execution, but if you set a variable that doesn't exist in cache or add ```FORCE``` keyword in that case
+the value will persist.
+Ex: ```set(FOO "BAR" CACHE string "some random value" FORCE)```
+Note: if you set some cache variable and a normal variable with the same name exists then the normal variable will be removed.
+
+## How to correctly use the variable scope in CMake
+
+CMake has two scopes:
+- Function scope - when we use ```function()```
+- Directory scope - when we use ```add_subdirectory()```
+
+When a nested scope is created, CMake simply fills it with copies of all the variables from the current scope. Subsequent command will affect the copies.
+At the end of the nested scope execution the copies are deleted.
+
+Ex:
+1. The parent scope sets the `VAR` variable to ONE.
+2. The nested scope prints `VAR`.
+3. The nested scope sets `VAR` to TWO.
+4. The nested scope prints `VAR`.
+5. The nested scope ends and `VAR` is printed.
+The output: ONE, TWO, ONE.
+
+If you use ```unset()``` in the nested scope then only the copy is deleted.
+Whenever we try to access the normal variabe (for exmaple, with ```${}``` syntax) CMake will:
+1. Search for the variable in the current scope.
+2. If CMake finds it - normal situation.
+3. If CMake doesn't find it - CMake starts searching in cache.
+4. At this point, only the _usual_ outcome is possibel.
+
+You can change a variable in the parent scope by adding PARENT_SCOPE flag.
+Exs:
+- ```set(MyVariable "NewValue" PARENT_SCOPE)```
+- ```unset(MyVariable PARENT_SCOPE)```
+
+You can access only one level up.
+
+## Using lists
+
+CMake stores lists by concating all of the elements with `;` as a separator. Ex: ```a;list;of;5;elements```
+
+You can create a list using ```set()``` command: ```set(myList a list of five elements)```.
+Interestingly, the following commands will produce the same list (because of how lists are stored):
+- set(myList "a;list;of;five;elements")
+- set(myList a list "of;five;elements")
+
+CMake unpacks lists into separate arguments.
+Ex: ```message("the list is:" ${myList})```
+The ```message()``` command will receive six arguments:
+1. the list is:
+2. a
+3. list
+4. of
+5. five
+6. elements
+And so the output will be: ```the list is:alistoffiveelements```

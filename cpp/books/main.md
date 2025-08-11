@@ -598,3 +598,105 @@ Note: CMake documentation specifies that if one of the operands is not a number,
 
 You can compare software versions by adding _VERSION__ prefix to any of the operators: ```if (1.3.4 VERSION_LESS_EQUAL 1.4)```
 You can compare strings lexicographically by adding _STR_ prefix: ```if (A STREQUAL "${B}")```
+
+CMake supports POSIX regex matching. We can use _MATCHES_ operator like this: `<VARIABLE|STRING> MATCHES <regex>`.
+Note: matched groups are captured in _CMAKE\_MATCH\_\<n\>_ variables.
+
+Ex: 
+```
+if(MY_VERSION MATCHES "[0-9]+\\.[0-9]+\\.[0-9]+")
+  message("Variable matches!")
+endif()
+```
+Simple checks:
+- If a value is in a list: ```<VARIABLE|STRING> IN_LIST <VARIABLE>```
+- If a command can be invoked: ```COMMAND <command-name>```
+- If a CMake policy exists: ```POLICY <policy-id>```
+- If a CTest was added with _add\_test()_: ```TEST <test-name>```
+- If a build target is defined: ```TARGET <target-name>```
+
+You can also examine the filesystem via the checks:
+- If a file or a directory exists: ```EXISTS <path-to-file-or-directory>```
+- If one file is newer than another: ```<file1> IS_NEWER_THAN <file2>```. Also returns true of one the files doesn't exist.
+- If a path is a directory: ```IS_DIRECTORY <path-to-directory>```
+- If a path is a symbolic link: ```IS_SYMLINK <file-name>```
+- If a path is absolute: ```IS_ABSOLUTE <path>```
+
+### Loops: while
+The synatx:
+```
+while (<condition>)
+  <commands>
+endwhile()
+```
+### Loops: foreach
+First form:
+```
+foreach(<loop_var> RANGE [<min>] <max> [<step>]) # ends are inclusive + <min> must be smaller that <max> + all arguments must be nonnegative integers
+  <commands>
+endforeach()
+```
+Second form:
+```
+foreach(<loop_variable> IN [LISTS <lists>] [ITEMS <items>])
+  <commands>
+endforeach()
+```
+This _more sophisticated_ loop will use _loop\_variable_ to iterate over all the elements from the lists + over all the additional items.
+Ex:
+```
+set(MY_LIST 1 2 3)
+foreach(VAR IN LISTS MY_LIST ITEMS e f)
+  message(${VAR})
+endforeach()
+```
+output:
+```
+1
+2
+3
+e
+f
+```
+You can also use shortened version and achieve same results: ```foreach(VAR 1 2 3 e f)```
+
+You can also do "zipping". Zipping lists means iterating through multiple lists and working on respective items with the same index.
+syntax: ```foreach(<loop_var>... IN ZIP_LISTS <lists>)```
+Ex:
+```
+set(L1 "one;two;three;four")
+set(L2 "1;2;3;4;5")
+foreach(num IN ZIP_LISTS L1 L2)
+  message("num_0=${num_0}, num_1=${num_1}")
+endforeach()
+```
+output:
+```
+num_0=one, num_1=1
+num_0=two, num_1=2
+num_0=three, num_1=3
+num_0=four, num_1=4
+num_0=, num_1=5
+```
+Reason: if your provide one variable and the number of lists is at leas 2, then CMake will create a _\<variable-name\>\_\<N\>_ (in our case \<variable-name\> is num) variable for each list provided.
+
+If you pass the same amount of variables as you have lists then each variable will correspond to the current item in a separate list.
+Ex:
+```
+set(L1 "one;two;three;four")
+set(L2 "1;2;3;4;5")
+foreach(word num IN ZIP_LISTS L1 L2)
+  message("word=${word}, num=${num}")
+endforeach()
+```
+output:
+```
+word=one, num=1
+word=two, num=2
+word=three, num=3
+word=four, num=4
+word=, num=5
+```
+
+## Command definitions
+
